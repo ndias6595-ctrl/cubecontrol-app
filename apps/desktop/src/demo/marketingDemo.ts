@@ -278,6 +278,16 @@ export function installDemoDesktopApi(connection: DesktopConnectionInfo): void {
       bank,
     }),
     library,
+    sync: {
+      status: async () => ({ configured: false, signedIn: false, email: null, lastSyncAt: null }),
+      signInWithOtp: async () => undefined,
+      verifyOtp: async () => undefined,
+      signOut: async () => undefined,
+      prepareSync: async () => ({ kind: "proceed" as const, localCount: 0, remoteCount: 0, twins: [] }),
+      syncNow: async () => ({ pushed: 0, pulled: 0, appliedUpserts: 0, appliedDeletes: 0 }),
+      onSignedIn: () => () => undefined,
+      onSynced: () => () => undefined,
+    },
     diagnostics: {
       exportBundle: async () => null,
       openExternal: async () => undefined,

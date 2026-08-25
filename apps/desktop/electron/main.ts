@@ -14,10 +14,70 @@ import {
 import { LibraryStore } from "./library/libraryStore.js";
 import { parseSharePayload, shareFileName } from "./library/shareFormat.js";
 import type { LibraryProfile } from "./library/types.js";
+import { SyncBridge } from "./sync/syncBridge.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const bridge = new DeviceBridge();
 let library: LibraryStore;
+let syncBridge: SyncBridge | undefined;
+
+const PROTOCOL = "cubecontrol";
+let deepLinkOnLaunch: string | null = null;
+
+function deepLinkUrlFrom(argv: readonly string[]): string | null {
+  return argv.find((arg) => arg.startsWith(`${PROTOCOL}://`)) ?? null;
+}
+
+/** Magic-link callback: completes the Supabase sign-in and notifies the UI. */
+function onDeepLink(url: string): void {
+  if (!url.startsWith(`${PROTOCOL}://`)) return;
+  if (syncBridge === undefined) {
+    deepLinkOnLaunch = url;
+    return;
+  }
+  void (async () => {
+    try {
+      await syncBridge.completeSignIn(url);
+      for (const win of BrowserWindow.getAllWindows()) {
+        win.webContents.send("sync:signedIn");
+      }
+    } catch (error) {
+      console.error("sync deep link failed", error);
+    }
+  })();
+}
+
+// Register the custom protocol so magic-link emails open CubeControl directly.
+if (process.defaultApp && process.argv.length >= 2) {
+  const entry = process.argv[1];
+  app.setAsDefaultProtocolClient(
+    PROTOCOL,
+    process.execPath,
+    entry === undefined ? [] : [path.resolve(entry)],
+  );
+} else {
+  app.setAsDefaultProtocolClient(PROTOCOL);
+}
+
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (_event, argv) => {
+    const url = deepLinkUrlFrom(argv);
+    if (url !== null) onDeepLink(url);
+    const win = BrowserWindow.getAllWindows()[0];
+    if (win !== undefined) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+  });
+}
+
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  onDeepLink(url);
+});
 
 function resolveAppIcon(): string | undefined {
   const candidates = [
@@ -62,6 +122,30 @@ function stamp(): string {
 app.whenReady().then(async () => {
   library = new LibraryStore(app.getPath("userData"));
   await library.ensure();
+  syncBridge = new SyncBridge(app.getPath("userData"), library);
+  const sync = syncBridge;
+
+  // Complete a sign-in that arrived while the app was closed (protocol launch).
+  const startupUrl = deepLinkUrlFrom(process.argv) ?? deepLinkOnLaunch;
+  if (startupUrl !== null) {
+    deepLinkOnLaunch = null;
+    onDeepLink(startupUrl);
+  }
+
+  // Debounced background sync after local library mutations.
+  let autoSyncTimer: ReturnType<typeof setTimeout> | undefined;
+  function scheduleAutoSync(): void {
+    if (autoSyncTimer !== undefined) clearTimeout(autoSyncTimer);
+    autoSyncTimer = setTimeout(() => {
+      autoSyncTimer = undefined;
+      void (async () => {
+        const result = await sync.autoSync();
+        if (result !== null) {
+          for (const win of BrowserWindow.getAllWindows()) win.webContents.send("sync:synced");
+        }
+      })();
+    }, 2500);
+  }
 
   // Mic / audio input for the software tuner (renderer getUserMedia).
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
@@ -188,10 +272,15 @@ app.whenReady().then(async () => {
         params: LiveParamsSnapshot;
         id?: string;
       },
-    ) => library.savePreset(input),
+    ) => {
+      const saved = await library.savePreset(input);
+      scheduleAutoSync();
+      return saved;
+    },
   );
   ipcMain.handle("library:deletePreset", async (_event, id: string) => {
     await library.deletePreset(id);
+    scheduleAutoSync();
   });
   ipcMain.handle(
     "library:importIrWav",
@@ -206,11 +295,14 @@ app.whenReady().then(async () => {
       },
     ) => {
       const wav = input.wav instanceof Uint8Array ? input.wav : Uint8Array.from(input.wav);
-      return library.importIrWav({ ...input, wav });
+      const saved = await library.importIrWav({ ...input, wav });
+      scheduleAutoSync();
+      return saved;
     },
   );
   ipcMain.handle("library:deleteIr", async (_event, id: string) => {
     await library.deleteIr(id);
+    scheduleAutoSync();
   });
   ipcMain.handle("library:readIrWav", async (_event, id: string) => library.readIrWav(id));
   ipcMain.handle(
@@ -249,17 +341,29 @@ app.whenReady().then(async () => {
     await bridge.selectCabinet(item.cabinet);
     return { verified, cabinet: item.cabinet, romSlot: item.romSlot };
   });
-  ipcMain.handle("library:saveSong", async (_event, input) => library.saveSong(input));
+  ipcMain.handle("library:saveSong", async (_event, input) => {
+    const saved = await library.saveSong(input);
+    scheduleAutoSync();
+    return saved;
+  });
   ipcMain.handle("library:deleteSong", async (_event, id: string) => {
     await library.deleteSong(id);
+    scheduleAutoSync();
   });
-  ipcMain.handle("library:saveShow", async (_event, input) => library.saveShow(input));
+  ipcMain.handle("library:saveShow", async (_event, input) => {
+    const saved = await library.saveShow(input);
+    scheduleAutoSync();
+    return saved;
+  });
   ipcMain.handle("library:deleteShow", async (_event, id: string) => {
     await library.deleteShow(id);
+    scheduleAutoSync();
   });
-  ipcMain.handle("library:exportShowAsPack", async (_event, showId: string) =>
-    library.exportShowAsPack(showId),
-  );
+  ipcMain.handle("library:exportShowAsPack", async (_event, showId: string) => {
+    const pack = await library.exportShowAsPack(showId);
+    scheduleAutoSync();
+    return pack;
+  });
   ipcMain.handle(
     "library:createPack",
     async (
@@ -276,13 +380,15 @@ app.whenReady().then(async () => {
       if (input.includeBank && bridge.connected) {
         bankJson = (await bridge.readBankFileDocument()).json;
       }
-      return library.createPack({
+      const pack = await library.createPack({
         name: input.name,
         presetIds: input.presetIds,
         irIds: input.irIds,
         ...(input.notes === undefined ? {} : { notes: input.notes }),
         ...(bankJson === undefined ? {} : { bankJson }),
       });
+      scheduleAutoSync();
+      return pack;
     },
   );
   ipcMain.handle("library:exportPack", async (event, packId: string) => {
@@ -359,11 +465,15 @@ app.whenReady().then(async () => {
   ipcMain.handle("library:importShare", async (_event, payload: unknown) => {
     const parsed = parseSharePayload(payload);
     if (parsed === null) throw new Error("archivo CubeControl no reconocido");
-    return library.importShare(parsed);
+    const result = await library.importShare(parsed);
+    scheduleAutoSync();
+    return result;
   });
   ipcMain.handle("library:importPackPath", async (_event, filePath: string) => {
     const bytes = new Uint8Array(await readFile(filePath));
-    return library.importPackZip(bytes);
+    const pack = await library.importPackZip(bytes);
+    scheduleAutoSync();
+    return pack;
   });
 
   ipcMain.handle(
@@ -414,6 +524,23 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle("diagnostics:revealInFolder", async (_event, filePath: string) => {
     revealInFolder(filePath);
+  });
+
+  ipcMain.handle("sync:status", async () => sync.status());
+  ipcMain.handle("sync:signInWithOtp", async (_event, email: string) => {
+    await sync.signInWithOtp(email);
+  });
+  ipcMain.handle("sync:verifyOtp", async (_event, email: string, token: string) => {
+    await sync.verifyOtp(email, token);
+  });
+  ipcMain.handle("sync:signOut", async () => {
+    await sync.signOut();
+  });
+  ipcMain.handle("sync:prepare", async () => sync.prepareSync());
+  ipcMain.handle("sync:syncNow", async (_event, input) => {
+    const result = await sync.syncNow(input ?? {});
+    for (const win of BrowserWindow.getAllWindows()) win.webContents.send("sync:synced");
+    return result;
   });
 
   createWindow();

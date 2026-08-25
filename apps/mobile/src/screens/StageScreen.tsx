@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { PanResponder, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../components/Button";
+import { PedalNeeded } from "../components/PedalNeeded";
 import { SessionBanner } from "../components/SessionBanner";
 import { useKeepAwake } from "../hooks/useKeepAwake";
 import { useI18n } from "../i18n";
@@ -24,6 +25,7 @@ export function StageScreen() {
     applySong,
     assignSongToSlot,
     loadIrWav,
+    connection,
   } = useApp();
 
   useKeepAwake(true);
@@ -39,11 +41,11 @@ export function StageScreen() {
   const goTo = useCallback(
     async (index: number) => {
       const song = ordered[index];
-      if (!song || busy) return;
+      if (!song || busy || connection === null) return;
       setSongIndex(index);
       await applySongMaybeIr(t, song, library, { applySong, loadIrWav });
     },
-    [applySong, busy, library, loadIrWav, ordered, setSongIndex, t],
+    [applySong, busy, connection, library, loadIrWav, ordered, setSongIndex, t],
   );
 
   const goToRef = useRef(goTo);
@@ -80,6 +82,7 @@ export function StageScreen() {
         </View>
 
         <SessionBanner error={error} status={status} busy={busy} dark />
+        {connection === null ? <PedalNeeded /> : null}
 
         <View style={styles.center} {...pan.panHandlers}>
           {current === null ? (
@@ -114,14 +117,14 @@ export function StageScreen() {
           <Button
             variant="stage"
             label={t("stage.prev")}
-            disabled={busy || !prev}
+            disabled={busy || !prev || connection === null}
             onPress={() => void goTo(songIndex - 1)}
             style={styles.ctrl}
           />
           <Button
             variant="stagePrimary"
             label={t("stage.applyLive")}
-            disabled={busy || !current}
+            disabled={busy || !current || connection === null}
             onPress={() => current && void applySongMaybeIr(t, current, library, { applySong, loadIrWav })}
             style={styles.ctrl}
           />
@@ -132,7 +135,7 @@ export function StageScreen() {
                 variant="stage"
                 label={`→${foot}`}
                 accessibilityLabel={t(`stage.assign${foot}`)}
-                disabled={busy || !current}
+                disabled={busy || !current || connection === null}
                 onPress={() => current && void assignSongToSlot(current.id, foot)}
                 style={styles.foot}
               />
@@ -141,7 +144,7 @@ export function StageScreen() {
           <Button
             variant="stage"
             label={t("stage.nextBtn")}
-            disabled={busy || !next}
+            disabled={busy || !next || connection === null}
             onPress={() => void goTo(songIndex + 1)}
             style={styles.ctrl}
           />

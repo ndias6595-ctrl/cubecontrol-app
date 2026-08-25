@@ -9,10 +9,10 @@ const TAB_NAMES = ["live", "tuner", "set", "device", "stage"] as const;
 type TabName = (typeof TAB_NAMES)[number];
 
 export default function TabsLayout() {
-  const { connection } = useApp();
+  const { shellOpen } = useApp();
   const { t } = useI18n();
 
-  if (connection === null) {
+  if (!shellOpen) {
     return <Redirect href="/" />;
   }
 

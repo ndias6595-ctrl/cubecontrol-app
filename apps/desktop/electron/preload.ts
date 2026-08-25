@@ -26,6 +26,7 @@ import type {
   SlotDiffRow,
   SongLibraryItem,
 } from "./library/types";
+import type { SyncNowInput, SyncPrepareResult, SyncStatus } from "./sync/types";
 
 export type UndoState = {
   readonly undoCount: number;
@@ -167,6 +168,21 @@ export type ToneHubDesktopApi = {
     options?: { live?: LiveParamsSnapshot; liveSlot?: PresetSlotId },
   ) => Promise<CopySlotResult>;
   library: ToneHubLibraryApi;
+  sync: {
+    status: () => Promise<SyncStatus>;
+    signInWithOtp: (email: string) => Promise<void>;
+    verifyOtp: (email: string, token: string) => Promise<void>;
+    signOut: () => Promise<void>;
+    prepareSync: () => Promise<SyncPrepareResult>;
+    syncNow: (input?: SyncNowInput) => Promise<{
+      pushed: number;
+      pulled: number;
+      appliedUpserts: number;
+      appliedDeletes: number;
+    }>;
+    onSignedIn: (callback: () => void) => () => void;
+    onSynced: (callback: () => void) => () => void;
+  };
   diagnostics: {
     exportBundle: (input: {
       notes: string;
@@ -227,6 +243,24 @@ const api: ToneHubDesktopApi = {
     ipcRenderer.invoke("tonehub:matchVolumes", source, liveSlot, liveVolume),
   copySlot: (from, to, options) => ipcRenderer.invoke("tonehub:copySlot", from, to, options),
   library,
+  sync: {
+    status: () => ipcRenderer.invoke("sync:status"),
+    signInWithOtp: (email) => ipcRenderer.invoke("sync:signInWithOtp", email),
+    verifyOtp: (email, token) => ipcRenderer.invoke("sync:verifyOtp", email, token),
+    signOut: () => ipcRenderer.invoke("sync:signOut"),
+    prepareSync: () => ipcRenderer.invoke("sync:prepare"),
+    syncNow: (input) => ipcRenderer.invoke("sync:syncNow", input),
+    onSignedIn: (callback) => {
+      const listener = () => callback();
+      ipcRenderer.on("sync:signedIn", listener);
+      return () => ipcRenderer.removeListener("sync:signedIn", listener);
+    },
+    onSynced: (callback) => {
+      const listener = () => callback();
+      ipcRenderer.on("sync:synced", listener);
+      return () => ipcRenderer.removeListener("sync:synced", listener);
+    },
+  },
   diagnostics: {
     exportBundle: (input) => ipcRenderer.invoke("diagnostics:exportBundle", input),
     openExternal: (url) => ipcRenderer.invoke("diagnostics:openExternal", url),

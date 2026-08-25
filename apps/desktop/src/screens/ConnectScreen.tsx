@@ -2,13 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import type { DesktopConnectionInfo } from "../types/device";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { SyncPanel } from "../components/SyncPanel";
 import { useReportProblem } from "../report/ReportProblemContext";
 
 type ConnectScreenProps = {
   readonly onConnected: (info: DesktopConnectionInfo) => void;
+  readonly onOpenLibrary: () => void;
 };
 
-export function ConnectScreen({ onConnected }: ConnectScreenProps) {
+export function ConnectScreen({ onConnected, onOpenLibrary }: ConnectScreenProps) {
   const { t, locale } = useI18n();
   const { openReportProblem } = useReportProblem();
   const [phase, setPhase] = useState<"idle" | "connecting" | "error">("idle");
@@ -81,6 +83,15 @@ export function ConnectScreen({ onConnected }: ConnectScreenProps) {
         </button>
         <button
           type="button"
+          className="connect__cta connect__cta--secondary"
+          onClick={onOpenLibrary}
+          disabled={phase === "connecting"}
+        >
+          {t("connect.ctaLibrary")}
+        </button>
+        <p className="connect__library-hint">{t("connect.libraryHint")}</p>
+        <button
+          type="button"
           className="connect__report"
           onClick={openReportProblem}
           disabled={phase === "connecting"}
@@ -88,6 +99,9 @@ export function ConnectScreen({ onConnected }: ConnectScreenProps) {
           {t("report.open")}
         </button>
         {phase === "error" && error ? <p className="connect__error">{error}</p> : null}
+      </div>
+      <div className="connect__sync">
+        <SyncPanel />
       </div>
     </main>
   );

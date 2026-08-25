@@ -46,6 +46,7 @@ export const es: Messages = {
   "nav.footswitch": "Footswitch",
   "nav.liveSlot": "Live · slot {slot}",
   "nav.disconnect": "Desconectar",
+  "nav.leaveLibrary": "Cerrar",
 
   "toolbar.undo": "Undo",
   "toolbar.redo": "Redo",
@@ -68,6 +69,9 @@ export const es: Messages = {
   "connect.safety":
     "Software no oficial · sin garantía · IR preferible en Cab 8 · exporta bank antes de experimentos. Ya aceptaste el aviso de riesgos en este equipo.",
   "connect.cta": "Conectar USB",
+  "connect.ctaLibrary": "Abrir biblioteca",
+  "connect.libraryHint":
+    "Tonos, canciones, shows, sync y packs funcionan sin el pedal. El USB es solo para knobs live, bank e IR.",
   "connect.connecting": "Conectando…",
 
   "safety.eyebrow": "Antes de conectar el pedal",
@@ -443,6 +447,7 @@ export const es: Messages = {
   "studio.copyOkBank": "Bank {from} → {to} (verificado)",
   "studio.copyFail": "Slot {to} escrito (verify falló — revisa el pedal)",
   "studio.toneApplied": "Tono aplicado a live",
+  "studio.needPedal": "Conecta el CUBE por USB para escribir live, bank o IR. La biblioteca y el share funcionan sin él.",
   "studio.toneMissing": "Tono de «{name}» no encontrado",
   "studio.songIrTitle": "IR de la canción → Cab {cab}",
   "studio.songIrBody": "Puede pisar factory. Prefiere Cab 8 cuando puedas.",

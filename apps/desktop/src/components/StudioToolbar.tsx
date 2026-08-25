@@ -1,5 +1,6 @@
 import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
 import { useI18n } from "../i18n";
+import { SyncButton } from "./SyncButton";
 
 const ALL_SLOTS: readonly PresetSlotId[] = ["A", "B", "C"];
 
@@ -16,6 +17,7 @@ type StudioToolbarProps = {
   readonly onCompare: () => void;
   readonly onCopyTo: (to: PresetSlotId) => void;
   readonly onOpenShow?: () => void;
+  readonly hasPedal?: boolean;
 };
 
 export function StudioToolbar({
@@ -31,6 +33,7 @@ export function StudioToolbar({
   onCompare,
   onCopyTo,
   onOpenShow,
+  hasPedal = true,
 }: StudioToolbarProps) {
   const { t } = useI18n();
   const copyTargets = ALL_SLOTS.filter((slot) => slot !== activeSlot);
@@ -41,7 +44,7 @@ export function StudioToolbar({
         <button
           type="button"
           className="studio-toolbar__btn"
-          disabled={busy || !canUndo}
+          disabled={busy || !hasPedal || !canUndo}
           onClick={onUndo}
           title={t("toolbar.undo")}
         >
@@ -50,7 +53,7 @@ export function StudioToolbar({
         <button
           type="button"
           className="studio-toolbar__btn"
-          disabled={busy || !canRedo}
+          disabled={busy || !hasPedal || !canRedo}
           onClick={onRedo}
           title={t("toolbar.redo")}
         >
@@ -60,7 +63,7 @@ export function StudioToolbar({
         <button
           type="button"
           className="studio-toolbar__btn studio-toolbar__btn--primary"
-          disabled={busy}
+          disabled={busy || !hasPedal}
           onClick={onSave}
         >
           {t("toolbar.saveSlot", { slot: activeSlot })}
@@ -72,7 +75,7 @@ export function StudioToolbar({
               key={slot}
               type="button"
               className="studio-toolbar__btn"
-              disabled={busy}
+              disabled={busy || !hasPedal}
               onClick={() => onCopyTo(slot)}
               title={t("toolbar.copyTitle", { slot })}
             >
@@ -80,7 +83,7 @@ export function StudioToolbar({
             </button>
           ))}
         </span>
-        <button type="button" className="studio-toolbar__btn" disabled={busy} onClick={onCompare}>
+        <button type="button" className="studio-toolbar__btn" disabled={busy || !hasPedal} onClick={onCompare}>
           {t("toolbar.compare")}
         </button>
         {activeShowLabel && onOpenShow ? (
@@ -98,6 +101,7 @@ export function StudioToolbar({
       <p className="studio-toolbar__status" aria-live="polite">
         {status ?? t("common.ready")}
       </p>
+      <SyncButton />
     </header>
   );
 }

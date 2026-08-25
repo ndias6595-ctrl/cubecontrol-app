@@ -19,6 +19,7 @@ import {
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
 import { useDebouncedLiveWrite } from "../hooks/useDebouncedLiveWrite";
 import { useI18n } from "../i18n";
+import { isLibraryOnlyConnection } from "../libraryOnly";
 import type { BankSnapshot, DesktopConnectionInfo, LiveParamsSnapshot } from "../types/device";
 import type { MatchVolumesSource } from "../../electron/deviceBridge";
 import type { ShowLibraryItem, SlotDiffRow, SongLibraryItem } from "../../electron/library/types";
@@ -49,6 +50,7 @@ function slotParams(bank: BankSnapshot, slot: PresetSlotId): LiveParamsSnapshot 
 
 export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
   const { t } = useI18n();
+  const hasPedal = !isLibraryOnlyConnection(connection);
   const [activeSlot, setActiveSlot] = useState<PresetSlotId>(connection.activeSlot);
   const [params, setParams] = useState<LiveParamsSnapshot>(connection.liveParams);
   const [bank, setBank] = useState<BankSnapshot>(connection.bank);
@@ -63,7 +65,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       return 0.5;
     }
   });
-  const [nav, setNav] = useState<StudioNavId>("editor");
+  const [nav, setNav] = useState<StudioNavId>(hasPedal ? "editor" : "library");
   const [activeShow, setActiveShow] = useState<ShowLibraryItem | null>(null);
   const [activeSongIndex, setActiveSongIndex] = useState(0);
   const [librarySongs, setLibrarySongs] = useState<SongLibraryItem[]>([]);
@@ -714,6 +716,10 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
   }
 
   async function onApplyLibraryPreset(next: LiveParamsSnapshot, label: string) {
+    if (!hasPedal) {
+      setError(t("studio.needPedal"));
+      return;
+    }
     setActionBusy(true);
     setError(null);
     try {
@@ -741,6 +747,10 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
   }
 
   async function onApplySong(song: SongLibraryItem) {
+    if (!hasPedal) {
+      setError(t("studio.needPedal"));
+      return;
+    }
     setActionBusy(true);
     setError(null);
     try {
@@ -798,6 +808,10 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
   }
 
   async function onAssignSongToSlot(song: SongLibraryItem, slot: PresetSlotId) {
+    if (!hasPedal) {
+      setError(t("studio.needPedal"));
+      return;
+    }
     setActionBusy(true);
     setError(null);
     try {
@@ -826,6 +840,10 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     readonly B: SongLibraryItem | null;
     readonly C: SongLibraryItem | null;
   }) {
+    if (!hasPedal) {
+      setError(t("studio.needPedal"));
+      return;
+    }
     setActionBusy(true);
     setError(null);
     try {
@@ -891,6 +909,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
         onNav={setNav}
         onSelectSlot={(slot) => void onSelectSlot(slot)}
         onDisconnect={onDisconnect}
+        hasPedal={hasPedal}
       />
 
       <div className="studio__workspace">
@@ -908,6 +927,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
             onCompare={() => void onCompare()}
             onCopyTo={(to) => void onCopyLiveTo(to)}
             onOpenShow={() => setNav("library")}
+            hasPedal={hasPedal}
           />
         ) : null}
 
@@ -953,6 +973,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
                 }}
               />
             ) : nav === "device" ? (
+              hasPedal ? (
               <DeviceWorkspace
                 busy={busy}
                 irCabinet={irCabinet}
@@ -964,6 +985,9 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
                 onImportBank={() => void onImportBank()}
                 onCompare={() => void onCompare()}
               />
+              ) : (
+                <p className="studio__need-pedal">{t("studio.needPedal")}</p>
+              )
             ) : nav === "stage" && activeShow ? (
               <StageMode
                 show={activeShow}
@@ -975,7 +999,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
                 onAssignSongToSlot={onAssignSongToSlot}
                 onExit={() => setNav("library")}
               />
-            ) : (
+            ) : hasPedal ? (
               <>
                 <CubeBabyPedal
                   params={params}
@@ -995,6 +1019,8 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
                   onApplyTime={onApplyTempoTime}
                 />
               </>
+            ) : (
+              <p className="studio__need-pedal">{t("studio.needPedal")}</p>
             )}
           </main>
         </div>

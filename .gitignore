@@ -21,8 +21,10 @@ Thumbs.db
 *.orig.*
 .env
 .env.*
+!.env.example
 
 # Android native build output
 **/.gradle/
 **/.cxx/
 *.apk
+.npmrc

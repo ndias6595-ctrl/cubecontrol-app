@@ -307,6 +307,93 @@ export class LibraryStore {
     });
   }
 
+  /**
+   * Sync write path: store an exact record verbatim (preserving `createdAt` and
+   * `updatedAt`) so last-write-wins is stable across devices. No UI validation
+   * and no timestamp stamping — the sync engine owns the version.
+   */
+  async upsertPreset(item: PresetLibraryItem): Promise<void> {
+    await this.ensure();
+    const index = await this.#readIndex();
+    const exists = index.presets.some((preset) => preset.id === item.id);
+    await writeFile(
+      path.join(this.presetsDir(), `${item.id}.json`),
+      `${JSON.stringify(item, null, 2)}\n`,
+    );
+    await this.#writeIndex({
+      ...index,
+      presets: exists
+        ? index.presets.map((preset) => (preset.id === item.id ? item : preset))
+        : [item, ...index.presets],
+    });
+  }
+
+  async upsertSong(item: SongLibraryItem): Promise<void> {
+    await this.ensure();
+    const index = await this.#readIndex();
+    const exists = index.songs.some((song) => song.id === item.id);
+    await writeFile(
+      path.join(this.songsDir(), `${item.id}.json`),
+      `${JSON.stringify(item, null, 2)}\n`,
+    );
+    await this.#writeIndex({
+      ...index,
+      songs: exists
+        ? index.songs.map((song) => (song.id === item.id ? item : song))
+        : [item, ...index.songs],
+    });
+  }
+
+  async upsertShow(item: ShowLibraryItem): Promise<void> {
+    await this.ensure();
+    const index = await this.#readIndex();
+    const exists = index.shows.some((show) => show.id === item.id);
+    await writeFile(
+      path.join(this.showsDir(), `${item.id}.json`),
+      `${JSON.stringify(item, null, 2)}\n`,
+    );
+    await this.#writeIndex({
+      ...index,
+      shows: exists
+        ? index.shows.map((show) => (show.id === item.id ? item : show))
+        : [item, ...index.shows],
+    });
+  }
+
+  /**
+   * Update IR metadata in place (metadata-only sync). Leaves the WAV file and
+   * `wavFile` untouched; a remote-only IR with no local WAV is skipped.
+   */
+  async updateIrMeta(
+    id: string,
+    meta: {
+      readonly name: string;
+      readonly notes: string;
+      readonly tags: readonly string[];
+      readonly profile: LibraryProfile;
+      readonly byteLength?: number;
+      readonly updatedAt: string;
+    },
+  ): Promise<void> {
+    const index = await this.#readIndex();
+    const existing = index.irs.find((ir) => ir.id === id);
+    if (existing === undefined) return;
+    const item: IrLibraryItem = {
+      ...existing,
+      name: meta.name,
+      notes: meta.notes,
+      tags: [...meta.tags],
+      profile: meta.profile,
+      ...(meta.byteLength === undefined ? {} : { byteLength: meta.byteLength }),
+      updatedAt: meta.updatedAt,
+    };
+    await writeFile(path.join(this.irDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+    await this.#writeIndex({
+      ...index,
+      irs: index.irs.map((ir) => (ir.id === id ? item : ir)),
+    });
+  }
+
   /** Build a pack from a show (presets + IRs referenced by its songs). */
   async exportShowAsPack(showId: string): Promise<PackLibraryItem> {
     const index = await this.#readIndex();

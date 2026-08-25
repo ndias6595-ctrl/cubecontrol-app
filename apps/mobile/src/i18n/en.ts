@@ -33,6 +33,9 @@ export const en: Messages = {
   "connect.support":
     "Stage companion: A/B/C, Mix, Time, and setlist. The full workshop stays on desktop.",
   "connect.ctaUsb": "Connect USB",
+  "connect.ctaLibrary": "Open library",
+  "connect.libraryHint":
+    "Tones, songs, shows, sync, and ZIP packs work without the pedal. USB is only for live, bank, and IR.",
   "connect.ctaDemo": "Try demo",
   "connect.connecting": "Connecting…",
   "connect.safety": "Experimental writer · USB and bank/IR require the safety notice.",
@@ -60,6 +63,10 @@ export const en: Messages = {
   "confirm.deleteShow": "This deletes the show “{name}”.",
 
   "live.applied": "On the pedal · {name}",
+
+  "pedalNeeded.title": "Pedal not connected",
+  "pedalNeeded.body":
+    "This screen talks to the CUBE. The library stays available without USB — share and sync from Library.",
 
   "live.title": "Live",
   "live.slotLed": "Slot {slot} active",
@@ -167,6 +174,8 @@ export const en: Messages = {
   "lib.aria": "CubeControl library",
   "lib.title": "Library",
   "lib.subtitle": "Tones, songs, and shows — without crowding the pedal",
+  "lib.offlineHint":
+    "No pedal on this session. You can browse, share, import, and sync. Connect USB from Live when you want to write the CUBE.",
   "lib.navAria": "Library sections",
   "lib.tones": "Tones",
   "lib.songs": "Songs",
@@ -234,6 +243,9 @@ export const en: Messages = {
   "lib.packsHintMobile": "Import a desktop ZIP pack (tones and IRs). IR ROM backups stay on the computer.",
   "lib.toneMissing": "Song “{name}” has no tone.",
   "lib.importPack": "Import ZIP pack",
+  "lib.irMissingOnDevice": "IR not on this phone",
+  "lib.irMissingHint":
+    "The song points to an IR that was not downloaded (cloud syncs names only). Import the ZIP pack from the computer.",
   "share.action": "Share",
   "share.importFile": "Open CubeControl file",
   "share.askTitle": "Load into the library?",

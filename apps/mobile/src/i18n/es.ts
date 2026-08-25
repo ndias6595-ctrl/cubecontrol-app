@@ -33,6 +33,9 @@ export const es: Messages = {
   "connect.support":
     "Companion de escenario: A/B/C, Mix, Time y setlist. El taller completo sigue en el escritorio.",
   "connect.ctaUsb": "Conectar USB",
+  "connect.ctaLibrary": "Abrir biblioteca",
+  "connect.libraryHint":
+    "Tonos, canciones, shows, sync y packs ZIP funcionan sin el pedal. El USB es solo para live, bank e IR.",
   "connect.ctaDemo": "Probar demo",
   "connect.connecting": "Conectando…",
   "connect.safety": "Escritor experimental · USB y bank/IR piden el aviso de seguridad.",
@@ -60,6 +63,10 @@ export const es: Messages = {
   "confirm.deleteShow": "Se borra el show “{name}”.",
 
   "live.applied": "En el pedal · {name}",
+
+  "pedalNeeded.title": "Pedal no conectado",
+  "pedalNeeded.body":
+    "Esta pantalla habla con el CUBE. La biblioteca sigue disponible sin USB: comparte y sincroniza desde Library.",
 
   "live.title": "Live",
   "live.slotLed": "Slot {slot} activo",
@@ -167,6 +174,8 @@ export const es: Messages = {
   "lib.aria": "Biblioteca CubeControl",
   "lib.title": "Biblioteca",
   "lib.subtitle": "Tonos, canciones y shows — sin apiñar el pedal",
+  "lib.offlineHint":
+    "No hay pedal en esta sesión. Puedes ver, compartir, importar y sincronizar. Conecta USB desde Live cuando quieras escribir al CUBE.",
   "lib.navAria": "Secciones biblioteca",
   "lib.tones": "Tonos",
   "lib.songs": "Canciones",
@@ -234,6 +243,9 @@ export const es: Messages = {
   "lib.packsHintMobile": "Importa un pack ZIP del escritorio (tonos e IRs). Los backups de IR ROM siguen en el PC.",
   "lib.toneMissing": "La canción “{name}” no tiene tono.",
   "lib.importPack": "Importar pack ZIP",
+  "lib.irMissingOnDevice": "IR no está en este teléfono",
+  "lib.irMissingHint":
+    "La canción apunta a un IR que no se bajó (el sync solo trae el nombre). Importa el pack ZIP del PC.",
   "share.action": "Compartir",
   "share.importFile": "Abrir archivo CubeControl",
   "share.askTitle": "¿Cargar en la biblioteca?",

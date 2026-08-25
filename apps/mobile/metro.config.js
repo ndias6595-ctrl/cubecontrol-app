@@ -1,4 +1,5 @@
 const path = require("node:path");
+const fs = require("node:fs");
 const { getDefaultConfig } = require("expo/metro-config");
 
 const projectRoot = __dirname;
@@ -8,7 +9,11 @@ const corePackagesRoot = path.resolve(appRepoRoot, "../Tonehub/packages");
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(projectRoot);
 
-config.watchFolders = [appRepoRoot, corePackagesRoot];
+const watchFolders = [appRepoRoot, corePackagesRoot];
+// Optional short pnpm store on Windows (see local .npmrc virtual-store-dir).
+const pnpmStore = "C:\\p";
+if (fs.existsSync(pnpmStore)) watchFolders.push(pnpmStore);
+config.watchFolders = watchFolders;
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(appRepoRoot, "node_modules"),

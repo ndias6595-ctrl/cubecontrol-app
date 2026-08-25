@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../components/Button";
 import { ComparePanel } from "../components/ComparePanel";
+import { PedalNeeded } from "../components/PedalNeeded";
 import { SafetyGate } from "../components/SafetyGate";
 import { SessionBanner } from "../components/SessionBanner";
 import { compareSlots, type MatchVolumesSource } from "../device/bank";
@@ -143,6 +144,20 @@ export function DeviceScreen() {
           return stored[name] !== live[name];
         })
       : false;
+
+  if (app.connection === null) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["top"]}>
+        <StatusBar style="light" />
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <Text style={styles.title} accessibilityRole="header">
+            {t("nav.device")}
+          </Text>
+          <PedalNeeded />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>

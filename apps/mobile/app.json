@@ -15,9 +15,6 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
-      "expo-document-picker",
-      "expo-file-system",
-      "expo-sharing",
       "@tonehub/midi-host-android",
       "./plugins/withBrandFonts.js"
     ],

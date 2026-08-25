@@ -151,6 +151,12 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
   }, [refresh, onError]);
 
   useEffect(() => {
+    return window.tonehubDesktop.sync.onSynced(() => {
+      void refresh().catch(() => undefined);
+    });
+  }, [refresh]);
+
+  useEffect(() => {
     if (activeShowId) setSelectedShowId(activeShowId);
   }, [activeShowId]);
 

@@ -24,6 +24,8 @@ export function ConnectScreen() {
     connect,
     clearError,
     acceptSafety,
+    openLibrary,
+    shellOpen,
   } = useApp();
   const [pedalReady, setPedalReady] = useState(false);
   const [showGate, setShowGate] = useState(false);
@@ -67,6 +69,10 @@ export function ConnectScreen() {
     };
   }, [usbAvailable, connecting]);
 
+  useEffect(() => {
+    if (shellOpen) router.replace("/(tabs)/set");
+  }, [router, shellOpen]);
+
   const usbError =
     errorCode === "USB_HOST_UNAVAILABLE" ||
     errorCode === "USB_DEVICE_NOT_FOUND" ||
@@ -81,6 +87,12 @@ export function ConnectScreen() {
     }
     const ok = await connect("usb");
     if (ok) router.replace("/(tabs)/live");
+  }
+
+  async function onLibrary() {
+    clearError();
+    openLibrary();
+    router.replace("/(tabs)/set");
   }
 
   async function onDemo() {
@@ -148,7 +160,14 @@ export function ConnectScreen() {
           disabled={!safetyReady}
           onPress={() => void onUsb()}
         />
-        <Button variant="secondary" label={t("connect.ctaDemo")} disabled={connecting} onPress={() => void onDemo()} />
+        <Button
+          variant="secondary"
+          label={t("connect.ctaLibrary")}
+          disabled={connecting}
+          onPress={() => void onLibrary()}
+        />
+        <Text style={styles.hintBody}>{t("connect.libraryHint")}</Text>
+        <Button variant="ghost" label={t("connect.ctaDemo")} disabled={connecting} onPress={() => void onDemo()} />
         {!safetyAccepted && safetyReady ? (
           <Text style={styles.hintBody}>{t("connect.safetyNeeded")}</Text>
         ) : null}

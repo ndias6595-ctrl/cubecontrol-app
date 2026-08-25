@@ -15,6 +15,7 @@ type StudioSidebarProps = {
   readonly onNav: (nav: StudioNavId) => void;
   readonly onSelectSlot: (slot: PresetSlotId) => void;
   readonly onDisconnect: () => void;
+  readonly hasPedal?: boolean;
   readonly children?: ReactNode;
 };
 
@@ -26,6 +27,7 @@ export function StudioSidebar({
   onNav,
   onSelectSlot,
   onDisconnect,
+  hasPedal = true,
   children,
 }: StudioSidebarProps) {
   const { t } = useI18n();
@@ -50,11 +52,13 @@ export function StudioSidebar({
         </span>
       </div>
 
-      <section className="studio-sidebar__section">
-        <p className="studio-sidebar__label">{t("nav.footswitch")}</p>
-        <SlotSwitcher active={activeSlot} busy={busy} onSelect={onSelectSlot} />
-        <p className="studio-sidebar__slot-meta">{t("nav.liveSlot", { slot: activeSlot })}</p>
-      </section>
+      {hasPedal ? (
+        <section className="studio-sidebar__section">
+          <p className="studio-sidebar__label">{t("nav.footswitch")}</p>
+          <SlotSwitcher active={activeSlot} busy={busy} onSelect={onSelectSlot} />
+          <p className="studio-sidebar__slot-meta">{t("nav.liveSlot", { slot: activeSlot })}</p>
+        </section>
+      ) : null}
 
       <nav className="studio-sidebar__nav" aria-label={t("nav.aria")}>
         {navItems.map((item) => (
@@ -90,7 +94,7 @@ export function StudioSidebar({
           disabled={busy}
           onClick={onDisconnect}
         >
-          {t("nav.disconnect")}
+          {hasPedal ? t("nav.disconnect") : t("nav.leaveLibrary")}
         </button>
       </div>
     </aside>

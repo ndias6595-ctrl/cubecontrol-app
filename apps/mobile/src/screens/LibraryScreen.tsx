@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { Button } from "../components/Button";
 import { SafetyGate } from "../components/SafetyGate";
 import { SessionBanner } from "../components/SessionBanner";
+import { SyncPanel } from "../components/SyncPanel";
 import { pickWavFile, pickShareFile, shareJsonFile, alertFilesError } from "../device/files";
 import { useI18n } from "../i18n";
 import { applySongMaybeIr } from "../library/applySongIr";
@@ -269,7 +270,9 @@ export function LibraryScreen() {
           {t("lib.title")}
         </Text>
         <Text style={styles.sub}>{t("lib.subtitle")}</Text>
+        {app.connection === null ? <Text style={styles.warn}>{t("lib.offlineHint")}</Text> : null}
         <SessionBanner error={app.error} status={app.status} busy={app.busy} />
+        <SyncPanel />
 
         <View style={styles.segs} accessibilityRole="tablist" accessibilityLabel={t("lib.navAria")}>
           {(["tones", "songs", "shows", "more"] as const).map((id) => (
@@ -406,7 +409,7 @@ export function LibraryScreen() {
                 </Text>
                 <Button
                   label={t("lib.applyLive")}
-                  disabled={app.busy}
+                  disabled={app.busy || app.connection === null}
                   onPress={() => void app.applyTone(selectedPreset.id)}
                 />
                 <Button
@@ -600,9 +603,21 @@ export function LibraryScreen() {
                   {t("lib.toneLabel")}{" "}
                   {app.library.presets.find((p) => p.id === selectedSong.presetId)?.name ?? t("lib.missingTone")}
                 </Text>
+                {selectedSong.irId && !app.library.irs.some((ir) => ir.id === selectedSong.irId) ? (
+                  <>
+                    <Text style={styles.warn}>
+                      {t("lib.irMissingOnDevice")}. {t("lib.irMissingHint")}
+                    </Text>
+                    <Button
+                      variant="secondary"
+                      label={t("lib.importPack")}
+                      onPress={() => void importShareFile()}
+                    />
+                  </>
+                ) : null}
                 <Button
                   label={t("lib.applySong")}
-                  disabled={app.busy}
+                  disabled={app.busy || app.connection === null}
                   onPress={() => void applySongMaybeIr(t, selectedSong, app.library, app)}
                 />
                 <Button
@@ -770,7 +785,7 @@ export function LibraryScreen() {
                     ))}
                     <Button
                       label={t("lib.writePedal")}
-                      disabled={app.busy || (!armSlots.A && !armSlots.B && !armSlots.C)}
+                      disabled={app.busy || app.connection === null || (!armSlots.A && !armSlots.B && !armSlots.C)}
                       onPress={() => void writeArm()}
                     />
                   </>
@@ -832,7 +847,7 @@ export function LibraryScreen() {
                 <Text style={styles.rowTitle}>{ir.name}</Text>
                 <Button
                   label={t("lib.toPedalCab", { cab: app.irCabinet })}
-                  disabled={app.busy}
+                  disabled={app.busy || app.connection === null}
                   onPress={() => void sendIr(ir.id)}
                 />
                 <Button variant="ghost" label={t("common.delete")} onPress={() => void app.deleteIr(ir.id)} />
@@ -873,6 +888,7 @@ const styles = StyleSheet.create({
   rowOn: { backgroundColor: colors.greenMuted },
   rowTitle: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.ink },
   rowMeta: { fontFamily: fonts.body, fontSize: 16, color: colors.muted, marginTop: 2 },
+  warn: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.warn, marginTop: 8 },
   input: {
     minHeight: HIT,
     borderWidth: 1.5,

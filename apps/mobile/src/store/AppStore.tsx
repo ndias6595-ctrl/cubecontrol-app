@@ -15,7 +15,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, AppState as RnAppState } from "react-native";
 import {
   connectDemo,
   connectUsb,
@@ -62,11 +62,15 @@ import {
 } from "../music/delaySync";
 import { readSafetyAcceptance, SafetyRequiredError, writeSafetyAcceptance, clearSafetyAcceptance } from "../safety/disclaimer";
 import { createLiveHistory, type LiveCheckpoint } from "./liveHistory";
+import * as Linking from "expo-linking";
+import { MobileSyncService, type MobileSyncStatus, type SyncPrepareResult } from "../sync/service";
 
 type ConnectKind = "usb" | "demo";
 
 type AppState = {
   readonly connection: DeviceConnection | null;
+  /** Tabs are reachable without USB so library/share/sync work offline. */
+  readonly shellOpen: boolean;
   readonly connecting: boolean;
   readonly busy: boolean;
   readonly error: string | null;
@@ -90,10 +94,16 @@ type AppState = {
   readonly redoCount: number;
   readonly irCabinet: number;
   readonly irDistance: number;
+  readonly sync: MobileSyncStatus;
+  readonly syncBusy: boolean;
+  readonly syncError: string | null;
+  readonly syncNotice: string | null;
+  readonly syncPrepare: SyncPrepareResult | null;
 };
 
 type AppActions = {
   connect: (kind: ConnectKind) => Promise<boolean>;
+  openLibrary: () => void;
   disconnect: () => Promise<void>;
   clearError: () => void;
   acceptSafety: () => Promise<void>;
@@ -157,6 +167,16 @@ type AppActions = {
   deleteShow: (id: string) => Promise<void>;
   setActiveShow: (showId: string | null, songIndex?: number) => void;
   setSongIndex: (index: number) => void;
+  syncSignIn: (email: string) => Promise<void>;
+  syncComplete: (url: string) => Promise<void>;
+  syncSignOut: () => Promise<void>;
+  syncNow: () => Promise<void>;
+  confirmSyncPolicy: (
+    policy: "use-cloud" | "upload-local",
+    mergeTwins: boolean,
+  ) => Promise<void>;
+  cancelSyncPrepare: () => void;
+  clearSyncError: () => void;
 };
 
 type AppContextValue = AppState & AppActions;
@@ -179,6 +199,7 @@ function messageOf(error: unknown): string {
 
 export function AppProvider({ children }: { readonly children: ReactNode }) {
   const [connection, setConnection] = useState<DeviceConnection | null>(null);
+  const [shellOpen, setShellOpen] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -202,6 +223,16 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
   const [redoCount, setRedoCount] = useState(0);
   const [irCabinet, setIrCabinetState] = useState(8);
   const [irDistance, setIrDistanceState] = useState(0.5);
+  const [sync, setSync] = useState<MobileSyncStatus>({
+    configured: true,
+    signedIn: false,
+    email: null,
+    lastSyncAt: null,
+  });
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [syncPrepare, setSyncPrepare] = useState<SyncPrepareResult | null>(null);
 
   const connectionRef = useRef<DeviceConnection | null>(null);
   const slotRef = useRef<PresetSlotId>("A");
@@ -216,6 +247,10 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
   const queueRef = useRef(Promise.resolve());
   const pendingLiveRef = useRef(new Map<LiveParamName, number>());
   const liveDrainRef = useRef(false);
+  const libraryRef = useRef<MobileLibrary>(EMPTY_LIBRARY);
+  const syncRef = useRef<MobileSyncService | null>(null);
+  const skipAutoSyncRef = useRef(false);
+  const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   connectionRef.current = connection;
   slotRef.current = slot;
@@ -223,6 +258,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
   delayNoteRef.current = delayNote;
   bpmRef.current = bpm;
   safetyAcceptedRef.current = safetyAccepted;
+  libraryRef.current = library;
 
   const enqueue = useCallback(<T,>(fn: () => Promise<T>): Promise<T> => {
     const run = queueRef.current.then(fn, fn);
@@ -236,6 +272,16 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
   const persist = useCallback(async (next: MobileLibrary) => {
     setLibrary(next);
     await saveLibrary(next);
+    if (skipAutoSyncRef.current) return;
+    if (autoSyncTimerRef.current) clearTimeout(autoSyncTimerRef.current);
+    autoSyncTimerRef.current = setTimeout(() => {
+      autoSyncTimerRef.current = null;
+      const service = syncRef.current;
+      if (service === null) return;
+      void service.autoSync().then((result) => {
+        if (result !== null) void service.status().then(setSync);
+      });
+    }, 2500);
   }, []);
 
   const publishHistory = useCallback(() => {
@@ -349,6 +395,131 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
     setSafetyAccepted(true);
   }, []);
 
+  const syncService = useCallback((): MobileSyncService => {
+    if (syncRef.current === null) {
+      syncRef.current = new MobileSyncService({
+        getLibrary: () => libraryRef.current,
+        setLibrary: (next) => persist(next),
+      });
+    }
+    return syncRef.current;
+  }, [persist]);
+
+  const refreshSyncStatus = useCallback(async () => {
+    if (syncRef.current === null) return;
+    setSync(await syncRef.current.status());
+  }, []);
+
+  const syncSignIn = useCallback(
+    async (email: string) => {
+      setSyncBusy(true);
+      setSyncError(null);
+      setSyncNotice(null);
+      try {
+        await syncService().signInWithOtp(email);
+        setSyncNotice("Revisa tu email y haz clic en el enlace.");
+      } catch (err) {
+        setSyncError(messageOf(err));
+      } finally {
+        setSyncBusy(false);
+      }
+    },
+    [syncService],
+  );
+
+  const syncComplete = useCallback(
+    async (url: string) => {
+      try {
+        await syncService().completeSignIn(url);
+        await refreshSyncStatus();
+      } catch (err) {
+        setSyncError(messageOf(err));
+      }
+    },
+    [refreshSyncStatus, syncService],
+  );
+
+  const syncSignOut = useCallback(async () => {
+    await syncService().signOut();
+    await refreshSyncStatus();
+  }, [refreshSyncStatus, syncService]);
+
+  const syncNow = useCallback(async () => {
+    setSyncBusy(true);
+    setSyncError(null);
+    setSyncNotice(null);
+    skipAutoSyncRef.current = true;
+    try {
+      const prepared = await syncService().prepareSync();
+      if (prepared.kind === "conflict") {
+        setSyncPrepare(prepared);
+        return;
+      }
+      const result = await syncService().syncNow({ policy: "normal" });
+      setSyncNotice(`Sync OK · +${result.pulled} · ${result.appliedUpserts}/${result.appliedDeletes}`);
+      await refreshSyncStatus();
+    } catch (err) {
+      setSyncError(messageOf(err));
+    } finally {
+      skipAutoSyncRef.current = false;
+      setSyncBusy(false);
+    }
+  }, [refreshSyncStatus, syncService]);
+
+  const confirmSyncPolicy = useCallback(
+    async (policy: "use-cloud" | "upload-local", mergeTwins: boolean) => {
+      const prepared = syncPrepare;
+      if (prepared === null) return;
+      setSyncBusy(true);
+      setSyncError(null);
+      skipAutoSyncRef.current = true;
+      try {
+        const result = await syncService().syncNow({
+          policy,
+          mergeTwins: mergeTwins && prepared.twins.length > 0,
+          twinKeep: policy === "use-cloud" ? "remote" : "local",
+          twins: [...prepared.twins],
+        });
+        setSyncPrepare(null);
+        setSyncNotice(`Sync OK · +${result.pulled} · ${result.appliedUpserts}/${result.appliedDeletes}`);
+        await refreshSyncStatus();
+      } catch (err) {
+        setSyncError(messageOf(err));
+      } finally {
+        skipAutoSyncRef.current = false;
+        setSyncBusy(false);
+      }
+    },
+    [refreshSyncStatus, syncPrepare, syncService],
+  );
+
+  const cancelSyncPrepare = useCallback(() => setSyncPrepare(null), []);
+
+  const clearSyncError = useCallback(() => setSyncError(null), []);
+
+  useEffect(() => {
+    void Linking.getInitialURL().then((url) => {
+      if (url !== null && url.includes("auth/callback")) void syncComplete(url);
+    });
+    const sub = Linking.addEventListener("url", (event) => {
+      if (event.url.includes("auth/callback")) void syncComplete(event.url);
+    });
+    return () => sub.remove();
+  }, [syncComplete]);
+
+  useEffect(() => {
+    const sub = RnAppState.addEventListener("change", (next) => {
+      if (next !== "active") return;
+      if (skipAutoSyncRef.current) return;
+      const service = syncRef.current;
+      if (service === null) return;
+      void service.autoSync().then((result) => {
+        if (result !== null) void service.status().then(setSync);
+      });
+    });
+    return () => sub.remove();
+  }, []);
+
   const connect = useCallback(
     async (kind: ConnectKind): Promise<boolean> => {
       if (connecting) return false;
@@ -363,6 +534,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
         await connectionRef.current?.close();
         const next = kind === "usb" ? await connectUsb() : await connectDemo();
         connectionRef.current = next;
+        setShellOpen(true);
         setConnection(next);
         setLive(next.live);
         liveRef.current = next.live;
@@ -392,6 +564,12 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
     },
     [connecting, disconnect, publishHistory, requireSafety],
   );
+
+  const openLibrary = useCallback(() => {
+    setError(null);
+    setErrorCode(null);
+    setShellOpen(true);
+  }, []);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -1335,6 +1513,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
   const value = useMemo<AppContextValue>(
     () => ({
       connection,
+      shellOpen,
       connecting,
       busy,
       error,
@@ -1358,7 +1537,13 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
       redoCount,
       irCabinet,
       irDistance,
+      sync,
+      syncBusy,
+      syncError,
+      syncNotice,
+      syncPrepare,
       connect,
+      openLibrary,
       disconnect,
       clearError,
       acceptSafety,
@@ -1402,6 +1587,13 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
       deleteShow,
       setActiveShow,
       setSongIndex,
+      syncSignIn,
+      syncComplete,
+      syncSignOut,
+      syncNow,
+      confirmSyncPolicy,
+      cancelSyncPrepare,
+      clearSyncError,
     }),
     [
       acceptSafety,
@@ -1439,6 +1631,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
       loadLibraryIr,
       matchVolumes,
       moveSongInShow,
+      openLibrary,
       redoCount,
       redoLive,
       reduceMotion,
@@ -1462,6 +1655,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
       setIrDistance,
       setLiveField,
       setSongIndex,
+      shellOpen,
       slot,
       songIndex,
       status,
@@ -1472,6 +1666,18 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
       undoCount,
       undoLive,
       usbAvailable,
+      sync,
+      syncBusy,
+      syncError,
+      syncNotice,
+      syncPrepare,
+      syncSignIn,
+      syncComplete,
+      syncSignOut,
+      syncNow,
+      confirmSyncPolicy,
+      cancelSyncPrepare,
+      clearSyncError,
     ],
   );
 

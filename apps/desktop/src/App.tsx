@@ -9,6 +9,7 @@ import { ConnectScreen } from "./screens/ConnectScreen";
 import { SplashScreen } from "./screens/SplashScreen";
 import { StudioScreen } from "./screens/StudioScreen";
 import { readSafetyAcceptance } from "./safety/disclaimer";
+import { isLibraryOnlyConnection, makeLibraryOnlyConnection } from "./libraryOnly";
 import type { DesktopConnectionInfo } from "./types/device";
 
 const marketingDemo = isMarketingDemo();
@@ -37,7 +38,7 @@ export function App() {
   }, []);
 
   async function onDisconnect() {
-    if (marketingDemo) {
+    if (marketingDemo || (connection !== null && isLibraryOnlyConnection(connection))) {
       setConnection(null);
       return;
     }
@@ -54,7 +55,7 @@ export function App() {
   }
 
   if (connection === null) {
-    return <ConnectScreen onConnected={setConnection} />;
+    return <ConnectScreen onConnected={setConnection} onOpenLibrary={() => setConnection(makeLibraryOnlyConnection())} />;
   }
 
   return <StudioScreen connection={connection} onDisconnect={() => void onDisconnect()} />;

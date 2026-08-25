@@ -20,8 +20,10 @@
   },
   "dependencies": {
     "@julusian/midi": "^3.8.1",
+    "@supabase/supabase-js": "^2.47.0",
     "@tonehub/cube-baby-api": "workspace:*",
     "@tonehub/cube-baby-protocol": "workspace:*",
+    "@tonehub/library-sync": "workspace:*",
     "@tonehub/midi-core": "workspace:*",
     "@tonehub/midi-transport-node": "workspace:*",
     "gsap": "^3.15.0",

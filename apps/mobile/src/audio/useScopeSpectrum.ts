@@ -41,7 +41,7 @@ export function useScopeSpectrum(active: boolean) {
     bands: new Float32Array(BANDS),
     rms: 0,
   });
-  const prevBandsRef = useRef(new Float32Array(BANDS));
+  const prevBandsRef = useRef<Float32Array>(new Float32Array(BANDS));
 
   const stop = useCallback(() => {
     void nativeMidiHost?.stopPitchCapture().catch(() => undefined);

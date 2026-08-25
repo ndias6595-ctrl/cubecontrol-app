@@ -1,5 +1,4 @@
 import { LIVE_PARAM_MAX, type LiveParamName, type PresetSlotId } from "@tonehub/cube-baby-protocol";
-import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -8,6 +7,7 @@ import { Button } from "../components/Button";
 import { DelayTapBar } from "../components/DelayTapBar";
 import { LiveToolbar } from "../components/LiveToolbar";
 import { ParamStepper } from "../components/ParamStepper";
+import { PedalNeeded } from "../components/PedalNeeded";
 import { SafetyGate } from "../components/SafetyGate";
 import { SessionBanner } from "../components/SessionBanner";
 import { SlotPads } from "../components/SlotPads";
@@ -32,7 +32,6 @@ function blockEngaged(block: LiveBlockDef, live: LiveParamsSnapshot): boolean {
 
 export function LiveScreen() {
   const { t } = useI18n();
-  const router = useRouter();
   const {
     connection,
     live,
@@ -67,7 +66,17 @@ export function LiveScreen() {
 
   useKeepAwake(connection?.mode === "usb");
 
-  if (connection === null || live === null) return null;
+  if (connection === null || live === null) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["top"]}>
+        <StatusBar style="light" />
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <Text style={styles.kicker}>{t("live.title")}</Text>
+          <PedalNeeded />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   const showGate = pendingBank !== null || errorCode === "SAFETY_REQUIRED";
 
@@ -80,7 +89,6 @@ export function LiveScreen() {
     });
     if (!ok) return;
     await disconnect();
-    router.replace("/");
   }
 
   async function runSave() {
