@@ -1,4 +1,4 @@
-name: Android APK
+ name: Android APK
 
 on:
   workflow_dispatch:
@@ -36,11 +36,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: pnpm
-          cache-dependency-path: cubecontrol-app/pnpm-lock.yaml
 
-      - name: Enable Corepack
-        run: corepack enable
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.1 --activate
 
       - name: Install dependencies
         working-directory: cubecontrol-app
