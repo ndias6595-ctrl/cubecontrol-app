@@ -1,0 +1,62 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "apps/mobile/**"
+      - "packages/**"
+      - ".github/workflows/android-apk.yml"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout CubeControl App
+        uses: actions/checkout@v4
+        with:
+          path: cubecontrol-app
+
+      - name: Checkout CubeControl Core
+        uses: actions/checkout@v4
+        with:
+          repository: MrGariZack/cubecontrol
+          path: Tonehub
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: cubecontrol-app/pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        working-directory: cubecontrol-app
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Android project
+        working-directory: cubecontrol-app
+        run: pnpm --filter @tonehub/mobile exec expo prebuild --platform android --non-interactive
+
+      - name: Build APK
+        working-directory: cubecontrol-app/apps/mobile/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CubeControl-Android
+          path: cubecontrol-app/apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
