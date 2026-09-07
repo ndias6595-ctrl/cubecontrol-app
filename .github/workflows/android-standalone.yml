@@ -1,0 +1,57 @@
+name: Android Standalone APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout CubeControl App
+        uses: actions/checkout@v4
+        with:
+          path: cubecontrol-app
+
+      - name: Checkout CubeControl Core
+        uses: actions/checkout@v4
+        with:
+          repository: MrGariZack/cubecontrol
+          path: Tonehub
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: cubecontrol-app/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: cubecontrol-app
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Android project
+        working-directory: cubecontrol-app
+        run: pnpm --filter @tonehub/mobile exec expo prebuild --platform android --non-interactive
+
+      - name: Build standalone APK
+        working-directory: cubecontrol-app/apps/mobile/android
+        run: ./gradlew assembleRelease
+
+      - name: Upload standalone APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CubeControl-Standalone
+          path: cubecontrol-app/apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
