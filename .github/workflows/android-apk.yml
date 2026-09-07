@@ -36,11 +36,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: pnpm
+          cache-dependency-path: cubecontrol-app/pnpm-lock.yaml
 
-      - name: Setup pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.34.1 --activate
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Install dependencies
         working-directory: cubecontrol-app
