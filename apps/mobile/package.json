@@ -47,8 +47,9 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
-    "typescript": "~5.9.2"
-  },
+    "typescript": "~5.9.2",
+"babel-preset-expo": "~57.0.10"
+},
   "expo": {
     "autolinking": {
       "exclude": [
