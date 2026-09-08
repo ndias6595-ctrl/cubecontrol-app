@@ -51,11 +51,11 @@ jobs:
 
       - name: Build APK
         working-directory: cubecontrol-app/apps/mobile/android
-        run: ./gradlew assembleDebug
+        run: ./gradllew assembleRelese
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: CubeControl-Android
-          path: cubecontrol-app/apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          path: cubecontrol-app/apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error 
