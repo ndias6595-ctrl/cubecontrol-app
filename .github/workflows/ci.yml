@@ -31,11 +31,11 @@ jobs:
       - name: Build core
         working-directory: Tonehub
         run: |
-          pnpm install --frozen-lockfile
+          pnpm install --no-frozen-lockfile
           pnpm build
 
       - name: Typecheck desktop
         working-directory: tonehub-app
         run: |
-          pnpm install --frozen-lockfile
+          pnpm install --no-frozen-lockfile
           pnpm --filter @tonehub/desktop typecheck
