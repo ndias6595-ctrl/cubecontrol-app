@@ -47,7 +47,7 @@ jobs:
 
       - name: Generate Android project
         working-directory: cubecontrol-app
-        run: pnpm --filter @tonehub/mobile exec expo prebuild --platform android --non-interactive
+        run: pnpm --filter @tonehub/mobile exec expo prebuild --platform android --non-interactive --clean
 
       - name: Build APK
         working-directory: cubecontrol-app/apps/mobile/android
