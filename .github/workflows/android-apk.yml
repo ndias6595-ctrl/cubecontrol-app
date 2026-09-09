@@ -52,8 +52,8 @@ jobs:
       
       - name: Build APK
         working-directory: cubecontrol-app/apps/mobile/android
-        run: ./gradllew assembleRelese 
-
+        run: pwd && ls -la && ls -la gradlew
+run:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
