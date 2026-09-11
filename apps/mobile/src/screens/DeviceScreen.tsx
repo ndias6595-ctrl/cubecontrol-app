@@ -183,49 +183,89 @@ export function DeviceScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t("device.ir.title")}</Text>
-          <Text style={styles.copy}>{t("device.ir.copy")}</Text>
-          <Text style={styles.label}>{t("device.ir.cabinet")}</Text>
-          <View style={styles.cabs}>
-            {CABS.map((cab) => (
-              <Pressable
-                key={cab}
-                accessibilityRole="button"
-                accessibilityLabel={`Cab ${cab}`}
-                accessibilityState={{ selected: app.irCabinet === cab }}
-                onPress={() => app.setIrCabinet(cab)}
-                style={[styles.cab, app.irCabinet === cab && styles.cabOn]}
-              >
-                <Text style={[styles.cabLabel, app.irCabinet === cab && styles.cabLabelOn]}>{cab}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <Text style={styles.hint}>
-            Cab {app.irCabinet}
-            {app.irCabinet === 8 ? t("device.ir.safe") : t("device.ir.risk")}
-          </Text>
-          <Text style={styles.label}>{t("mic.hint")}</Text>
-          <View style={styles.distRow}>
-            <Button
-              variant="secondary"
-              label="−"
-              disabled={app.busy}
-              onPress={() => app.setIrDistance(Math.max(0, Math.round((app.irDistance - 0.05) * 100) / 100))}
-              style={styles.step}
-            />
-            <Text style={styles.distValue}>
-              {t("mic.valueText", { pct: Math.round(app.irDistance * 100), float: app.irDistance.toFixed(2) })}
-            </Text>
-            <Button
-              variant="secondary"
-              label="+"
-              disabled={app.busy}
-              onPress={() => app.setIrDistance(Math.min(1, Math.round((app.irDistance + 0.05) * 100) / 100))}
-              style={styles.step}
-            />
-          </View>
-          <Button label={t("device.ir.load")} disabled={app.busy} onPress={() => void onLoadIr()} />
-        </View>
+  <Text style={styles.cardTitle}>Gerenciador de IR</Text>
+  <Text style={styles.copy}>
+    Escolha o banco onde o IR será instalado.
+  </Text>
+
+  <Text style={styles.label}>IRs disponíveis</Text>
+
+  <View style={styles.cabs}>
+    {CABS.map((cab) => (
+      <Pressable
+        key={cab}
+        accessibilityRole="button"
+        accessibilityLabel={`IR ${cab}`}
+        accessibilityState={{ selected: app.irCabinet === cab }}
+        onPress={() => app.setIrCabinet(cab)}
+        style={[
+          styles.cab,
+          app.irCabinet === cab && styles.cabOn,
+        ]}
+      >
+        <Text
+          style={[
+            styles.cabLabel,
+            app.irCabinet === cab && styles.cabLabelOn,
+          ]}
+        >
+          IR {cab}
+        </Text>
+      </Pressable>
+    ))}
+  </View>
+
+  <Text style={styles.hint}>
+    IR {app.irCabinet} selecionado
+  </Text>
+
+  <Text style={styles.label}>Distância do microfone</Text>
+
+  <View style={styles.distRow}>
+    <Button
+      variant="secondary"
+      label="−"
+      disabled={app.busy}
+      onPress={() =>
+        app.setIrDistance(
+          Math.max(
+            0,
+            Math.round((app.irDistance - 0.05) * 100) / 100,
+          ),
+        )
+      }
+      style={styles.step}
+    />
+
+    <Text style={styles.distValue}>
+      {t("mic.valueText", {
+        pct: Math.round(app.irDistance * 100),
+        float: app.irDistance.toFixed(2),
+      })}
+    </Text>
+
+    <Button
+      variant="secondary"
+      label="+"
+      disabled={app.busy}
+      onPress={() =>
+        app.setIrDistance(
+          Math.min(
+            1,
+            Math.round((app.irDistance + 0.05) * 100) / 100,
+          ),
+        )
+      }
+      style={styles.step}
+    />
+  </View>
+
+  <Button
+    label={t("device.ir.load")}
+    disabled={app.busy}
+    onPress={() => void onLoadIr()}
+  />
+</View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("device.levels.title")}</Text>
