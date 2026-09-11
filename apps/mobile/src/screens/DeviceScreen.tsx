@@ -76,6 +76,10 @@ export function DeviceScreen() {
         distance: app.irDistance,
         fileName: file.name,
       });
+          setIrNames((prev) => ({
+      ...prev,
+      [app.irCabinet]: file.name,
+    }));
     } catch (err) {
       alertFilesError(err);
     }
