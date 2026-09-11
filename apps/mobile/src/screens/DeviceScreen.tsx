@@ -213,7 +213,7 @@ export function DeviceScreen() {
             app.irCabinet === cab && styles.cabLabelOn,
           ]}
         >
-          IR {cab}{"\n"}{irNames[cab] ?? "vazio"}
+          IR {cab}{"\n"}{irNames[cab] ?? "vazio"}{"\n"}Slot {cab - 1} · {"0x" + (0x68000 + cab * 0x1000).toString(16).toUpperCase()}
         </Text>
       </Pressable>
     ))}
