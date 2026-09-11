@@ -213,7 +213,7 @@ export function DeviceScreen() {
             app.irCabinet === cab && styles.cabLabelOn,
           ]}
         >
-          IR {cab}
+          IR {cab}{"\n"}{irNames[cab] ?? "vazio"}
         </Text>
       </Pressable>
     ))}
