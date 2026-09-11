@@ -25,6 +25,7 @@ export function DeviceScreen() {
   const [showGate, setShowGate] = useState(false);
   const live = app.live;
   const bank = app.connection?.bank;
+  const [irNames, setIrNames] = useState<Record<number, string>>({});
 
   async function ensureSafety(): Promise<boolean> {
     if (app.safetyAccepted) return true;
