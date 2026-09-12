@@ -34,8 +34,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-         cache: pnpm
-         cache-dependency-path: cubecontrol-app/pnpm-lock.yaml
+          cache: pnpm
+          cache-dependency-path: cubecontrol-app/pnpm-lock.yaml
       - name: Install Core dependencies
         working-directory: Tonehub
         run: pnpm install --no-frozen-lockfile
