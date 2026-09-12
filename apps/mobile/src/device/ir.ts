@@ -1,4 +1,4 @@
-import type { CubeBabySession } from "@tonehub/cube-baby-api";
+ import type { CubeBabySession } from "@tonehub/cube-baby-api";
 
 export type LoadIrResult = {
   readonly cabinet: number;
@@ -20,7 +20,7 @@ export async function loadIrFromWav(
     readonly distance?: number;
   },
 ): Promise<LoadIrResult> {
-  if (wav.byteLength < 44) throw new Error("WAV demasiado corto");
+  if (wav.byteLength < 44) throw new Error("WAV demasiado curto");
   if (!Number.isInteger(cabinet) || cabinet < 1 || cabinet > 8) {
     throw new Error("cabinet IR target must be 1..8");
   }
@@ -46,5 +46,38 @@ export async function loadIrFromWav(
     cabinet: result.cabinet,
     persistVerified: result.persist.verified,
     liveMatch: `${result.liveMatchPrefix}/${result.liveMatchTotal}`,
+  };
+}
+
+export type ReadIrSlotResult = {
+  readonly cabinet: number;
+  readonly slotIndex: number;
+  readonly address: number;
+  readonly data: Uint8Array;
+};
+
+/**
+ * Read one existing IR ROM slot from the pedal.
+ * App numbering is 1..8; protocol slotIndex is 0..7.
+ */
+export async function readIrSlot(
+  session: CubeBabySession,
+  cabinet: number,
+): Promise<ReadIrSlotResult> {
+  if (!Number.isInteger(cabinet) || cabinet < 1 || cabinet > 8) {
+    throw new Error("cabinet IR target must be 1..8");
+  }
+
+  const slotIndex = cabinet - 1;
+  const result = await session.dumpIrRom({
+    slotIndex,
+    timeoutMs: 8_000,
+  });
+
+  return {
+    cabinet,
+    slotIndex: result.slotIndex,
+    address: result.address,
+    data: result.data,
   };
 }
