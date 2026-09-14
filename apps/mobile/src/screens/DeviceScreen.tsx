@@ -64,7 +64,15 @@ export function DeviceScreen() {
   }
 
   async function onLoadIr() {
-    if (!(await ensureSafety())) return;
+  const teste = await confirmAction({
+    title: "TESTE IR WAV",
+    message: "O botão Carregar IR WAV entrou no onLoadIr.",
+    confirmLabel: "CONTINUAR",
+    cancelLabel: "CANCELAR",
+  });
+  if (!teste) return;
+
+  if (!(await ensureSafety())) return;
     try {
       const file = await pickWavFile();
       if (!file) return;
