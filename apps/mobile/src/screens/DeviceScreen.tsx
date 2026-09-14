@@ -275,7 +275,14 @@ export function DeviceScreen() {
   <Button
     label={t("device.ir.load")}
     disabled={app.busy}
-    onPress={() => void onLoadIr()}
+onPress={() =>
+  void confirmAction({
+    title: "TESTE BOTAO IR",
+    message: "O botão Carregar IR WAV está funcionando.",
+    confirmLabel: "OK",
+    cancelLabel: "CANCELAR",
+  })
+}
   />
 </View>
 
