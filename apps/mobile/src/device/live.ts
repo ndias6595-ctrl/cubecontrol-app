@@ -97,6 +97,16 @@ export async function applySlotToLive(
 ): Promise<LiveParamsSnapshot> {
   const index = slotIndexOf(slot);
   const snap = slotToLive(bank.slots[index]);
-  await applyLiveParams(session, snap, index);
+
+  const restored = await session.restoreBank({
+    data: bank.raw,
+    liveSlotIndex: index,
+    timeoutMs: 5_000,
+  });
+
+  if (!restored.verified) {
+    throw new Error(`Falha ao verificar o preset ${slot} no pedal`);
+  }
+
   return snap;
 }
